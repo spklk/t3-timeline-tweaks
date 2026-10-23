@@ -91,9 +91,12 @@ const PATCHES = [
     count: 1,
   },
   {
-    name: "'Working for …' shimmer highlight is light grey instead of white (other shimmers unchanged)",
-    re: new RegExp(`(\`Working\\.\\.\\.\`[^]{0,200}?=${ID}\\?\\(0,\\$\\.jsx\\)\\(${ID},\\{children:)(${ID})\\}\\)`, "g"),
-    to: (_, head, text) => `${head}(0,$.jsx)(\`span\`,{className:\`text-foreground/70\`,children:${text}})})`,
+    name: "'Working for …' shimmer is the grey-text/white-band 'live-tool-shine' used by the Thinking row, not the faint overlay",
+    re: new RegExp(
+      `(\`Working\\.\\.\\.\`[^]{0,200}?=)${ID}\\?\\(0,\\$\\.jsx\\)\\(${ID},\\{children:${ID}\\}\\):null([^]{0,200}?className:\`relative shrink-0 overflow-hidden whitespace-nowrap)\``,
+      "g",
+    ),
+    to: (_, head, mid) => `${head}null${mid} live-tool-shine\``,
     count: 1,
   },
   {
