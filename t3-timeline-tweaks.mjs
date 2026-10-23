@@ -91,12 +91,12 @@ const PATCHES = [
     count: 1,
   },
   {
-    name: "'Working for …' shimmer is the grey-text/white-band 'live-tool-shine' used by the Thinking row, not the faint overlay",
+    name: "'Working for …' shimmer matches the brain icon: muted icon-grey text under the white overlay band",
     re: new RegExp(
-      `(\`Working\\.\\.\\.\`[^]{0,200}?=)${ID}\\?\\(0,\\$\\.jsx\\)\\(${ID},\\{children:${ID}\\}\\):null([^]{0,200}?className:\`relative shrink-0 overflow-hidden whitespace-nowrap)\``,
+      `(\`Working\\.\\.\\.\`[^]{0,400}?className:\`relative shrink-0 overflow-hidden whitespace-nowrap)\``,
       "g",
     ),
-    to: (_, head, mid) => `${head}null${mid} live-tool-shine\``,
+    to: (_, head) => `${head} text-icon-muted\``,
     count: 1,
   },
   {
