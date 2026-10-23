@@ -13,7 +13,7 @@ What it changes:
 - the "Working for Xs" timer sits at the bottom of the timeline while the agent works, instead of
   under your message where expanded output scrolls it out of view; it shimmers like "Thinking" and
   uses small italic text in the thinking color so it reads as a status line; its shimmer highlight
-  is light grey (`text-foreground/80`) instead of white
+  is grey (`text-foreground/70`) instead of white
 - the thinking panel's 384px max-height cap and its own scroll container are removed (no inner scrollbar)
 - the tool-call group is no longer capped at min(18rem, 50dvh); it grows with its content instead of scrolling
 

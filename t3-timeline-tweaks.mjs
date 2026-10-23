@@ -93,7 +93,7 @@ const PATCHES = [
   {
     name: "'Working for …' shimmer highlight is light grey instead of white (other shimmers unchanged)",
     re: new RegExp(`(\`Working\\.\\.\\.\`[^]{0,200}?=${ID}\\?\\(0,\\$\\.jsx\\)\\(${ID},\\{children:)(${ID})\\}\\)`, "g"),
-    to: (_, head, text) => `${head}(0,$.jsx)(\`span\`,{className:\`text-foreground/80\`,children:${text}})})`,
+    to: (_, head, text) => `${head}(0,$.jsx)(\`span\`,{className:\`text-foreground/70\`,children:${text}})})`,
     count: 1,
   },
   {
