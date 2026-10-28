@@ -29,16 +29,6 @@ const PATCHES = [
     count: 4,
   },
   {
-    name: "work group toggle reports the inverted collapse direction",
-    re: new RegExp(
-      `=\\((${ID}),(${ID})\\)=>\\{(${ID})\\(\\2,(${ID})\\.has\\(\\1\\)\\),(${ID})\\((${ID})=>\\{let (${ID})=new Set\\(\\6\\);return \\7\\.has\\(\\1\\)\\?\\7\\.delete\\(\\1\\):\\7\\.add\\(\\1\\),\\7\\}\\)\\}`,
-      "g",
-    ),
-    to: (m, groupId, anchor, suspend, set) =>
-      m.replace(`${suspend}(${anchor},${set}.has(${groupId}))`, () => `${suspend}(${anchor},!${set}.has(${groupId}))`),
-    count: 1,
-  },
-  {
     name: "finished turns do not hide their work",
     re: new RegExp(`if\\(!${ID}\\.expandedRunIds\\?\\.has\\(${ID}\\.runId\\)\\)\\{`, "g"),
     to: () => "if(!1){",
@@ -46,8 +36,8 @@ const PATCHES = [
   },
   {
     name: "no 'Worked for …' turn-fold row",
-    re: new RegExp(`if\\(${ID}&&(${ID})\\.push\\(\\{kind:\`turn-fold\``, "g"),
-    to: (_, rows) => `if(!1&&${rows}.push({kind:\`turn-fold\``,
+    re: new RegExp(`if\\((${ID})\\)\\{(let ${ID}=${ID}\\.flatMap\\(${ID}=>\\1\\.entryIds\\.has\\()`, "g"),
+    to: (_, _fold, rest) => `if(!1){${rest}`,
     count: 1,
   },
   {
@@ -84,7 +74,7 @@ const PATCHES = [
   {
     name: "'Working for …' row always shimmers (upstream only does it while compacting/preparing)",
     re: new RegExp(
-      `(\\{isCompacting:${ID},isPreparingWorktree:${ID},backgroundWorktreeSetup:${ID}\\}=\\(0,${ID}\\.use\\)\\(${ID}\\),(${ID}))=${ID}\\|\\|${ID},`,
+      `(\\{isCompacting:${ID},isPreparingWorktree:${ID},backgroundWorktreeSetup:${ID}\\}=\\(0,${ID}\\.use\\)\\(${ID}\\),(?:${ID}=[^,]*,)?(${ID}))=${ID}\\|\\|${ID},`,
       "g",
     ),
     to: (_, head) => `${head}=!0,`,

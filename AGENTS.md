@@ -146,15 +146,15 @@ Linux: `sudo rm /etc/apt/apt.conf.d/99-t3-timeline-tweaks`.
 
 ## 6. When patches stop matching a new T3 build
 
-The patches are regexes over T3's minified chat bundle (`apps/server/dist/client/assets/_chat-*.js`
-inside `app.asar`). Minified identifiers change between builds, so the regexes use the `ID` wildcard
+The patches are regexes over T3's minified timeline bundle (`apps/server/dist/client/assets/useTimelineFollow-*.js`, earlier `_chat-*.js`)
+inside `app.asar`. Minified identifiers change between builds, so the regexes use the `ID` wildcard
 and anchor on stable strings: class names, `"Working for "`, `expandedWorkGroupIds`,
 `calc(min(18rem, 50dvh)`, and so on. Each entry in `PATCHES` has a `name` that says what it does.
 
 To update them:
 
 1. Extract the bundle: `npx -y @electron/asar extract "<app.asar>" /tmp/t3x/out` (errors about unpacked
-   files can be ignored). Open `out/apps/server/dist/client/assets/_chat-*.js`.
+   files can be ignored). Open the `out/apps/server/dist/client/assets/*.js` file that contains `expandedWorkGroupIds`.
 2. For each failing patch, find its anchor string, look at the new code around it, and adjust `re` and `count`.
    If the feature disappeared upstream, drop the patch.
 3. Test on a copy only, so the real app and backup stay untouched:
@@ -163,7 +163,7 @@ To update them:
    cp "<app.asar>" /tmp/t3x/app.asar
    T3_APP=/tmp/t3x/app.asar T3_BACKUP_DIR=/tmp/t3x/backup node t3-timeline-tweaks.mjs apply
    npx -y @electron/asar extract /tmp/t3x/app.asar /tmp/t3x/patched
-   cp /tmp/t3x/patched/apps/server/dist/client/assets/_chat-*.js /tmp/t3x/check.mjs
+   cp /tmp/t3x/patched/apps/server/dist/client/assets/useTimelineFollow-*.js /tmp/t3x/check.mjs
    node --check /tmp/t3x/check.mjs
    ```
 

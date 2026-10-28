@@ -61,7 +61,7 @@ Keep the clone where it is: the agent and the backup live in it.
 
 ## How it works and caveats
 
-It edits the minified `_chat-*.js` bundle inside T3's `app.asar` in place
+It edits the minified timeline bundle (currently `useTimelineFollow-*.js`, earlier `_chat-*.js`) inside T3's `app.asar` in place
 with a list of regex patches (`PATCHES` in the script). The bundle keeps the same byte size, and the
 asar integrity hashes are updated.
 
@@ -70,4 +70,4 @@ asar integrity hashes are updated.
   stays untouched. The regexes then need updating; AGENTS.md section 6 explains how.
 - This modifies a signed app. It is not supported by T3; use it at your own risk.
   `restore` (or reinstalling T3 Code) undoes it.
-- Last verified against `0.1.3-nightly.20261023.3566`.
+- Last verified against `0.1.4-nightly.20261028.3824`.
