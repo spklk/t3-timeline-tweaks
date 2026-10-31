@@ -36,7 +36,7 @@ const PATCHES = [
   },
   {
     name: "no 'Worked for …' turn-fold row",
-    re: new RegExp(`if\\((${ID})\\)\\{(let ${ID}=${ID}\\.flatMap\\(${ID}=>\\1\\.entryIds\\.has\\()`, "g"),
+    re: new RegExp(`if\\((${ID})\\)\\{(let ${ID}=[^;]{0,40}?\\1\\.entryIds\\b)`, "g"),
     to: (_, _fold, rest) => `if(!1){${rest}`,
     count: 1,
   },

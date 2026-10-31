@@ -70,4 +70,4 @@ asar integrity hashes are updated.
   stays untouched. The regexes then need updating; AGENTS.md section 6 explains how.
 - This modifies a signed app. It is not supported by T3; use it at your own risk.
   `restore` (or reinstalling T3 Code) undoes it.
-- Last verified against `0.1.4-nightly.20261028.3824`.
+- Last verified against `0.1.6-nightly.20261031.3969`.
