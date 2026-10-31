@@ -58,6 +58,11 @@ Permission errors on `apply`:
 
 Then ask the user to restart T3 Code.
 
+Opt-outs: `T3_COLLAPSE` (comma list of `groups`, `thinking`, `rows`, `subagents`) keeps those starting
+collapsed; see README.md. If the user sets it, it must also reach every re-apply job below: on macOS
+run `install-agent` with it set; on Windows set it as a user environment variable like `T3_APP`; in the
+Linux apt hook put `T3_COLLAPSE=... ` in front of the node command.
+
 ## 3. Keep it applied after T3 updates
 
 Every T3 update replaces `app.asar` and drops the patch, so `apply` has to run again afterwards.
@@ -130,7 +135,8 @@ re-extracted manually.
 
 After a restart of T3 Code, in a thread where the agent thinks and runs tools:
 
-- "Thought" rows and tool groups are expanded; thinking text is small, italic and muted
+- "Thought" rows, tool groups, command/tool rows and subagent groups are expanded (unless opted out
+  with `T3_COLLAPSE`); thinking text is small, italic and muted
 - tool groups and thinking have no inner scrollbars
 - while the agent works, a small italic shimmering "Working for Xs" line sits at the bottom
 

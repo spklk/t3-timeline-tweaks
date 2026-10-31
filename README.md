@@ -6,9 +6,13 @@ still working.
 
 What it changes:
 
-- work groups (tool/thinking runs) start expanded; clicking still collapses them
+- work groups (tool/thinking runs) start expanded
 - finished turns are no longer folded into "Worked for Xs"
 - "Thought" rows start expanded
+- command and tool rows start expanded, so their output shows without a click; long output still
+  scrolls inside T3's own height cap
+- subagent groups start expanded
+- clicking still collapses (or opens) any of these, and that choice sticks when the row scrolls away
 - thinking text is muted (`text-secondary-label`), italic and smaller than replies (`text-xs`, 12px vs 14px)
 - the "Working for Xs" timer sits at the bottom of the timeline while the agent works, instead of
   under your message where expanded output scrolls it out of view; it shimmers like "Thinking" and
@@ -54,6 +58,18 @@ node t3-timeline-tweaks.mjs restore          # put the original app.asar back
 node t3-timeline-tweaks.mjs install-agent    # macOS: re-apply automatically after updates
 node t3-timeline-tweaks.mjs uninstall-agent  # macOS
 ```
+
+Each "start expanded" default above can be switched off with `T3_COLLAPSE`, a comma-separated list
+of `groups`, `thinking`, `rows` (command/tool rows) and `subagents`. Those keep T3's collapsed default:
+
+```sh
+T3_COLLAPSE=rows,subagents node t3-timeline-tweaks.mjs restore
+T3_COLLAPSE=rows,subagents node t3-timeline-tweaks.mjs apply
+T3_COLLAPSE=rows,subagents node t3-timeline-tweaks.mjs install-agent   # macOS: the agent keeps the choice
+```
+
+To change it later, run those three again with the new list (`restore` first, since `apply` skips an
+already patched app).
 
 Restart T3 Code after apply/restore. On macOS, after a T3 update the agent re-patches within seconds
 (or 30 min at worst), and a restart is needed again. Log: `~/Library/Logs/t3-timeline-tweaks.log`.

@@ -20,10 +20,18 @@ const LOG = path.join(os.homedir(), "Library/Logs/t3-timeline-tweaks.log");
 const MARKER = "/*t3xt*/";
 const ID = "[\\w$]+";
 
-// Each patch must match exactly `count` times, otherwise nothing is written.
+// Opt-outs: T3_COLLAPSE=groups,thinking,rows,subagents keeps those starting collapsed (upstream behaviour).
+const COLLAPSE_OPTIONS = ["groups", "thinking", "rows", "subagents"];
+const COLLAPSE = new Set((process.env.T3_COLLAPSE ?? "").split(",").map((s) => s.trim()).filter(Boolean));
+// Which work rows start open. The expandedEntries Set then holds the rows flipped from that default.
+const rowsOpen = (entry) =>
+  COLLAPSE.has("rows") ? `${entry}.itemType===\`reasoning\`` : COLLAPSE.has("thinking") ? `${entry}.itemType!==\`reasoning\`` : "!0";
+
+// Each patch must match exactly `count` times, otherwise nothing is written. `skip` patches are left out.
 const PATCHES = [
   {
     name: "work groups start expanded (Set now tracks collapsed groups)",
+    skip: COLLAPSE.has("groups"),
     re: new RegExp(`(${ID})\\.expandedWorkGroupIds\\?\\.has\\((${ID})\\)\\?\\?!1`, "g"),
     to: (_, state, id) => `!${state}.expandedWorkGroupIds?.has(${id})`,
     count: 4,
@@ -41,9 +49,38 @@ const PATCHES = [
     count: 1,
   },
   {
-    name: "thought rows start expanded",
+    name: "thought and tool rows start expanded (Set now tracks rows flipped from the default)",
+    skip: COLLAPSE.has("thinking") && COLLAPSE.has("rows"),
     re: new RegExp(`\\(\\)=>(${ID})\\?\\.state\\.expandedEntries\\.has\\((${ID})\\.id\\)\\?\\?!1`, "g"),
-    to: (_, view, entry) => `()=>${view}?.state.expandedEntries.has(${entry}.id)||${entry}.itemType===\`reasoning\``,
+    to: (_, view, entry) => `()=>${view}?.state.expandedEntries.has(${entry}.id)!==(${rowsOpen(entry)})`,
+    count: 1,
+  },
+  {
+    name: "row toggle records flips from the default, so a manual collapse survives remounts",
+    skip: COLLAPSE.has("thinking") && COLLAPSE.has("rows"),
+    re: new RegExp(
+      `(${ID})\\?(${ID})\\.state\\.expandedEntries\\.add\\((${ID})\\.id\\):\\2\\.state\\.expandedEntries\\.delete\\(\\3\\.id\\)`,
+      "g",
+    ),
+    to: (m, open, _view, entry) => `${open}!==(${rowsOpen(entry)})${m.slice(open.length)}`,
+    count: 1,
+  },
+  {
+    name: "subagent groups start expanded (Set now tracks collapsed groups)",
+    skip: COLLAPSE.has("subagents"),
+    re: new RegExp(`\\(\\)=>(${ID})\\.workGroupViewState\\.expandedEntries\\.has\\(`, "g"),
+    to: (_, ctx) => `()=>!${ctx}.workGroupViewState.expandedEntries.has(`,
+    count: 1,
+  },
+  {
+    name: "subagent group toggle records collapses instead of expansions",
+    skip: COLLAPSE.has("subagents"),
+    re: new RegExp(
+      `(${ID})\\?(${ID})\\.workGroupViewState\\.expandedEntries\\.add\\((${ID})\\):\\2\\.workGroupViewState\\.expandedEntries\\.delete\\(\\3\\)`,
+      "g",
+    ),
+    to: (_, open, ctx, key) =>
+      `${open}?${ctx}.workGroupViewState.expandedEntries.delete(${key}):${ctx}.workGroupViewState.expandedEntries.add(${key})`,
     count: 1,
   },
   {
@@ -110,6 +147,12 @@ const PATCHES = [
 ];
 
 const log = (msg) => console.log(`${new Date().toISOString()} ${msg}`);
+
+const unknownCollapse = [...COLLAPSE].filter((c) => !COLLAPSE_OPTIONS.includes(c));
+if (unknownCollapse.length) {
+  log(`ERROR: T3_COLLAPSE has unknown ${unknownCollapse.join(", ")}; use ${COLLAPSE_OPTIONS.join(", ")}.`);
+  process.exit(1);
+}
 
 // T3_APP may point at the app (bundle or install dir) or directly at app.asar.
 function asarIn(appPath) {
@@ -204,7 +247,7 @@ function readArchive(file) {
 
 function patchText(text) {
   let out = text;
-  for (const p of PATCHES) {
+  for (const p of PATCHES.filter((p) => !p.skip)) {
     if (typeof p.to !== "function") throw new Error(`Patch "${p.name}" has no replacement function.`);
     const hits = out.match(p.re)?.length ?? 0;
     if (hits !== p.count) {
@@ -320,7 +363,7 @@ function installAgent() {
   <key>Label</key><string>${LABEL}</string>
   <key>ProgramArguments</key>
   <array><string>${xml(process.execPath)}</string><string>${xml(script)}</string><string>apply</string><string>--quiet</string></array>
-  <key>EnvironmentVariables</key><dict><key>T3_APP</key><string>${xml(ASAR)}</string></dict>
+  <key>EnvironmentVariables</key><dict><key>T3_APP</key><string>${xml(ASAR)}</string>${COLLAPSE.size ? `<key>T3_COLLAPSE</key><string>${[...COLLAPSE].join(",")}</string>` : ""}</dict>
   <key>WatchPaths</key><array><string>${xml(ASAR)}</string></array>
   <key>RunAtLoad</key><true/>
   <key>StartInterval</key><integer>1800</integer>
