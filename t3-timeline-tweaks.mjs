@@ -321,7 +321,49 @@ function apply({ quiet }) {
   }
   fs.renameSync(tmp, ASAR);
   log(`Patched ${version} (${archive.name}). Restart T3 Code to apply.`);
-  if (quiet) notify(`Patched T3 Code ${version}. Restart T3 Code to see the changes.`);
+  if (!quiet) return;
+  const bundle = ASAR.slice(0, ASAR.indexOf(".app/") + 4);
+  const uptime = IS_MAC ? t3Uptime(bundle) : null;
+  if (uptime === null) return notify(`Patched T3 Code ${version}. Restart T3 Code to see the changes.`);
+  // After an update T3 relaunches before the patch lands, so a T3 that fresh is restarted silently.
+  // An older one may be running agent sessions (a fix landing hours later), so ask first.
+  if (uptime > 120 && !askRestart(version)) return;
+  if (restartT3(bundle)) return log("Restarted T3 Code to load the patch.");
+  notify(`Patched T3 Code ${version}. Restart T3 Code to see the changes.`);
+}
+
+// Seconds the T3 app (and its server, same executable) has been running, or null when it is not running.
+function t3Uptime(bundle) {
+  const ps = execFileSync("ps", ["-axo", "etime=,command="], { encoding: "utf8" });
+  const ages = ps
+    .split("\n")
+    .map((line) => line.trim().match(/^(?:(\d+)-)?([\d:]+)\s+(.*)$/))
+    .filter((m) => m?.[3].startsWith(`${bundle}/Contents/MacOS/`))
+    .map(([, days = 0, clock]) => Number(days) * 86400 + clock.split(":").reduce((t, n) => t * 60 + Number(n), 0));
+  return ages.length ? Math.max(...ages) : null;
+}
+
+// Defaults to Later and gives up after 10 minutes, so an unseen dialog never stops a session or the job.
+function askRestart(version) {
+  const text = `T3 Code ${version} was patched. Restart it now to load the changes? Running sessions will be stopped.`;
+  const script = `display dialog ${JSON.stringify(text)} with title "T3 timeline tweaks" buttons {"Later", "Restart now"} default button "Later" giving up after 600`;
+  try {
+    return execFileSync("osascript", ["-e", script], { encoding: "utf8" }).includes("button returned:Restart now");
+  } catch {
+    return false;
+  }
+}
+
+function restartT3(bundle) {
+  try {
+    execFileSync("osascript", ["-e", `tell application ${JSON.stringify(path.basename(bundle, ".app"))} to quit`]);
+  } catch {
+    return false; // e.g. Automation permission denied; fall back to the notification
+  }
+  for (let i = 0; i < 40 && t3Uptime(bundle) !== null; i++) execFileSync("sleep", ["0.5"]);
+  if (t3Uptime(bundle) !== null) return false;
+  execFileSync("open", [bundle]);
+  return true;
 }
 
 function restore() {
