@@ -85,7 +85,8 @@ from section 2. With Homebrew the path is version-specific: after `brew upgrade 
 path and re-run `install-agent`.
 
 Verify: run `restore`, wait about 15 seconds (launchd throttles restarts to one per 10 s), then
-`status` must say `patched` again.
+`status` must say `patched` again. If T3 has been running for more than 2 minutes, the restart dialog
+appears; "Later" keeps the user's sessions running.
 
 ### Windows (set up yourself)
 
