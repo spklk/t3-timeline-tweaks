@@ -74,7 +74,8 @@ already patched app).
 Restart T3 Code after apply/restore. On macOS, after a T3 update the agent re-patches within seconds
 (or 30 min at worst). If T3 relaunched less than 2 minutes earlier (the usual case right after an
 update) the agent restarts it once more by itself. Otherwise T3 may be running sessions, so it asks first with
-a "Restart now" / "Later" dialog (it closes itself as "Later" after 10 minutes). Log: `~/Library/Logs/t3-timeline-tweaks.log`.
+a "Restart now" / "Later" dialog (it closes itself as "Later" after 10 minutes). It restarts T3 at most
+once a minute; within that minute it falls back to a notification, so a restart loop cannot happen. Log: `~/Library/Logs/t3-timeline-tweaks.log`.
 Keep the clone where it is: the agent and the backup live in it.
 
 ## How it works and caveats

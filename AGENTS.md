@@ -78,7 +78,9 @@ This installs a LaunchAgent that runs `apply --quiet` whenever `app.asar` change
 30 minutes. Failures show a macOS notification. Log: `~/Library/Logs/t3-timeline-tweaks.log`.
 When it patches a T3 that started less than 2 minutes ago (just relaunched by its updater), it quits
 and reopens T3 itself; macOS may ask once to allow `node` to control T3 Code. An older T3 may be running
-sessions, so it shows a "Restart now" / "Later" dialog instead. A manual `apply` never restarts T3.
+sessions, so it shows a "Restart now" / "Later" dialog instead. A manual `apply` never restarts T3, and
+the agent restarts it at most once a minute (falling back to a notification; the time is kept in
+`~/Library/Logs/t3-timeline-tweaks.last-restart`).
 
 The agent runs the `node` binary that ran `install-agent`, and that binary needs the App Management permission
 from section 2. With Homebrew the path is version-specific: after `brew upgrade node`, grant the new

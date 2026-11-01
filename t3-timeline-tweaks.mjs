@@ -17,6 +17,7 @@ const BACKUP_DIR = process.env.T3_BACKUP_DIR ?? path.join(HERE, "backup");
 const LABEL = "local.t3-timeline-tweaks";
 const PLIST = path.join(os.homedir(), "Library/LaunchAgents", `${LABEL}.plist`);
 const LOG = path.join(os.homedir(), "Library/Logs/t3-timeline-tweaks.log");
+const LAST_RESTART = path.join(os.homedir(), "Library/Logs/t3-timeline-tweaks.last-restart");
 const MARKER = "/*t3xt*/";
 const ID = "[\\w$]+";
 
@@ -321,15 +322,26 @@ function apply({ quiet }) {
   }
   fs.renameSync(tmp, ASAR);
   log(`Patched ${version} (${archive.name}). Restart T3 Code to apply.`);
-  if (!quiet) return;
+  if (quiet) restartAfterPatch(version);
+}
+
+function restartAfterPatch(version) {
+  const later = () => notify(`Patched T3 Code ${version}. Restart T3 Code to see the changes.`);
   const bundle = ASAR.slice(0, ASAR.indexOf(".app/") + 4);
   const uptime = IS_MAC ? t3Uptime(bundle) : null;
-  if (uptime === null) return notify(`Patched T3 Code ${version}. Restart T3 Code to see the changes.`);
+  if (uptime === null) return later();
+  // At most one restart a minute, so if something keeps unpatching T3 there is time to step in.
+  const lastRestart = fs.existsSync(LAST_RESTART) ? fs.statSync(LAST_RESTART).mtimeMs : 0;
+  if (Date.now() - lastRestart < 60_000) {
+    log("Not restarting: T3 Code was restarted less than a minute ago.");
+    return later();
+  }
   // After an update T3 relaunches before the patch lands, so a T3 that fresh is restarted silently.
   // An older one may be running agent sessions (a fix landing hours later), so ask first.
   if (uptime > 120 && !askRestart(version)) return;
+  fs.writeFileSync(LAST_RESTART, "");
   if (restartT3(bundle)) return log("Restarted T3 Code to load the patch.");
-  notify(`Patched T3 Code ${version}. Restart T3 Code to see the changes.`);
+  later();
 }
 
 // Seconds the T3 app (and its server, same executable) has been running, or null when it is not running.
