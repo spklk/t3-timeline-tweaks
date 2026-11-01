@@ -103,6 +103,15 @@ const PATCHES = [
     count: 1,
   },
   {
+    name: "'Working for …' row also goes below the live 'Thinking' row and its open tool group",
+    re: new RegExp(
+      `if\\((${ID}\\.isWorking&&!${ID}&&${ID}\\(\\)),(${ID}\\.isWorking&&${ID}\\.latestRun\\?\\.turnEnded!==!0[^]{0,600}?else ${ID}\\.push\\(\\{kind:\`thinking\`,id:${ID},createdAt:${ID}\\.activeTurnStartedAt\\?\\?null\\}\\)\\})`,
+      "g",
+    ),
+    to: (_, push, thinking) => `if(${thinking}${push};`,
+    count: 1,
+  },
+  {
     name: "'Working for …' row: top divider (it sits at the bottom) and small italic thinking-colored status text",
     re: /className:`border-b border-border\/60 pb-2 pt-1`(,children:\(0,\$\.jsxs\)\(`div`,\{className:`flex h-6 min-w-0 items-baseline gap-2 px-1 )text-sm leading-relaxed text-muted-foreground( tabular-nums`)/g,
     to: (_, mid, tail) =>
