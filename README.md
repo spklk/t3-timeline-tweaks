@@ -71,6 +71,10 @@ T3_COLLAPSE=rows,subagents node t3-timeline-tweaks.mjs install-agent   # macOS: 
 To change it later, run those three again with the new list (`restore` first, since `apply` skips an
 already patched app).
 
+To keep tool activity closed but still read everything the agent wrote, collapse all four:
+`T3_COLLAPSE=groups,thinking,rows,subagents`. Finished turns still never fold into "Worked for" (that
+part has no opt-out), so every text part of a turn stays visible.
+
 Restart T3 Code after apply/restore. On macOS, after a T3 update the agent re-patches within seconds
 (or 30 min at worst). If T3 relaunched less than 2 minutes earlier (the usual case right after an
 update) the agent restarts it once more by itself. Otherwise T3 may be running sessions, so it asks first with
@@ -89,4 +93,4 @@ asar integrity hashes are updated.
   stays untouched. The regexes then need updating; AGENTS.md section 6 explains how.
 - This modifies a signed app. It is not supported by T3; use it at your own risk.
   `restore` (or reinstalling T3 Code) undoes it.
-- Last verified against `0.1.7-nightly.20261101.4016`.
+- Last verified against `0.1.9-nightly.20261111.4515`. Only nightly builds have been checked.
