@@ -94,3 +94,14 @@ asar integrity hashes are updated.
 - This modifies a signed app. It is not supported by T3; use it at your own risk.
   `restore` (or reinstalling T3 Code) undoes it.
 - Last verified against `0.1.10-nightly.20261115.4736`. Only nightly builds have been checked.
+
+## Getting fixes
+
+Nothing updates your clone by itself. When a T3 update breaks the patch, a fixed version usually follows
+here. To hear about it, click **Watch → Custom → Releases** on GitHub; a release is published automatically
+whenever the script changes. Then:
+
+```sh
+git -C ~/repos/t3-timeline-tweaks pull
+node ~/repos/t3-timeline-tweaks/t3-timeline-tweaks.mjs apply
+```

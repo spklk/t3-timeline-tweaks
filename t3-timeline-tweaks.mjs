@@ -261,7 +261,10 @@ function patchText(text) {
     if (typeof p.to !== "function") throw new Error(`Patch "${p.name}" has no replacement function.`);
     const hits = out.match(p.re)?.length ?? 0;
     if (hits !== p.count) {
-      throw new Error(`Patch "${p.name}" matched ${hits}x, expected ${p.count}x. T3 changed; update the script.`);
+      throw new Error(
+        `T3 changed and this copy doesn't handle it. Update: git -C "${HERE}" pull, then run apply again ` +
+          `(no fix yet? see AGENTS.md section 6). Patch "${p.name}" matched ${hits}x, expected ${p.count}x.`,
+      );
     }
     out = out.replace(p.re, p.to);
   }

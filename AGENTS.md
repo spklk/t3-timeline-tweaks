@@ -158,6 +158,9 @@ Linux: `sudo rm /etc/apt/apt.conf.d/99-t3-timeline-tweaks`.
 
 ## 6. When patches stop matching a new T3 build
 
+First run `git pull` in this clone and `dry-run` again: a fix may already be published. Only if it still
+fails, update the patches yourself as below.
+
 The patches are regexes over T3's minified timeline bundle (`apps/server/dist/client/assets/useTimelineFollow-*.js`, earlier `_chat-*.js`)
 inside `app.asar`. Minified identifiers change between builds, so the regexes use the `ID` wildcard
 and anchor on stable strings: class names, `"Working for "`, `expandedWorkGroupIds`,

@@ -1,0 +1,27 @@
+# Publishes a release whenever the patch script changes, so watchers (Watch → Custom → Releases) hear about fixes.
+name: release
+on:
+  push:
+    branches: [main]
+    paths: [t3-timeline-tweaks.mjs]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="v$(date -u +%Y.%m.%d)-$(git rev-parse --short HEAD)"
+          verified=$(sed -n 's/.*Last verified against `\([^`]*\)`.*/\1/p' README.md)
+          {
+            git log -1 --format=%B | grep -iv '^co-authored-by:'
+            echo
+            echo "Verified against T3 Code ${verified:-unknown}."
+            echo
+            echo 'Update: `git pull` in your clone, then `node t3-timeline-tweaks.mjs apply`.'
+          } > notes.md
+          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --notes-file notes.md
