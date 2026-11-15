@@ -105,7 +105,7 @@ const PATCHES = [
   {
     name: "'Working for …' row also goes below the live 'Thinking' row and its open tool group",
     re: new RegExp(
-      `if\\((${ID}\\.isWorking&&!${ID}&&${ID}\\(\\)),(${ID}\\.isWorking&&${ID}\\.latestRun\\?\\.turnEnded!==!0[^]{0,600}?else ${ID}\\.push\\(\\{kind:\`thinking\`,id:${ID},createdAt:${ID}\\.activeTurnStartedAt\\?\\?null\\}\\)\\})`,
+      `if\\((${ID}\\.isWorking&&!${ID}&&${ID}\\(\\)),(${ID}\\.isWorking&&${ID}\\.latestRun\\?\\.turnEnded!==!0[^]{0,800}?else\\{[^{}]{0,120}?${ID}\\.push\\(\\{kind:\`thinking\`,id:${ID},createdAt:${ID}\\.activeTurnStartedAt\\?\\?null(?:,\\.\\.\\.[^;]{0,60}?)?\\}\\)\\}\\})`,
       "g",
     ),
     to: (_, push, thinking) => `if(${thinking}${push};`,
