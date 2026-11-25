@@ -58,12 +58,13 @@ Permission errors on `apply`:
 
 Then ask the user to restart T3 Code.
 
-Options (see README.md): `T3_COLLAPSE` (comma list of `turns`, `groups`, `thinking`, `rows`, `subagents`)
-keeps those starting collapsed; `T3_THOUGHTS` (comma list of `small`, `italic`, `line`, `strong-line`, or
-`plain`; default `line,small`) sets how thinking text looks. If the user sets either, it must also reach
+Options (see README.md): `T3_COLLAPSE` (comma list of `turns`, `groups`, `thinking`, `rows` or `ok-rows`,
+`subagents`) keeps those starting collapsed; `T3_THOUGHTS` (comma list of `small`, `italic`, `line`,
+`strong-line`, or `plain`; default `line,small`) sets how thinking text looks; `T3_TOOLS` (comma list of
+`small`, `box`, `short`; default none) styles tool rows. If the user sets any of them, it must also reach
 every re-apply job below: on macOS run `install-agent` with it set; on Windows set it as a user
-environment variable like `T3_APP`; in the Linux apt hook put `T3_COLLAPSE=... T3_THOUGHTS=... ` in front
-of the node command.
+environment variable like `T3_APP`; in the Linux apt hook put `T3_COLLAPSE=... T3_THOUGHTS=... T3_TOOLS=... `
+in front of the node command.
 
 ## 3. Keep it applied after T3 updates
 
@@ -146,7 +147,7 @@ After a restart of T3 Code, in a thread where the agent thinks and runs tools:
 - finished turns, "Thought" rows, tool groups, command/tool rows and subagent groups are expanded (unless
   opted out with `T3_COLLAPSE`); a finished turn has a "Worked for Xs" header that folds it on click
 - thinking text is small and muted with a thin line down its left edge (or as set with `T3_THOUGHTS`)
-- tool groups and thinking have no inner scrollbars
+- tool groups, thinking and approval prompts have no inner scrollbars
 - while the agent works, a small italic shimmering "Working for Xs" line sits at the bottom
 
 ## 5. Undo

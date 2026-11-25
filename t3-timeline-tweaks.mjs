@@ -22,16 +22,30 @@ const MARKER = "/*t3xt*/";
 const ID = "[\\w$]+";
 
 // Opt-outs: T3_COLLAPSE=turns,groups,thinking,rows,subagents keeps those starting collapsed (upstream behaviour).
-const COLLAPSE_OPTIONS = ["turns", "groups", "thinking", "rows", "subagents"];
+// ok-rows is rows except that failed commands/tools still start open.
+const COLLAPSE_OPTIONS = ["turns", "groups", "thinking", "rows", "ok-rows", "subagents"];
 const COLLAPSE = new Set((process.env.T3_COLLAPSE ?? "").split(",").map((s) => s.trim()).filter(Boolean));
 // Which work rows start open. The expandedEntries Set then holds the rows flipped from that default.
-const rowsOpen = (entry) =>
-  COLLAPSE.has("rows") ? `${entry}.itemType===\`reasoning\`` : COLLAPSE.has("thinking") ? `${entry}.itemType!==\`reasoning\`` : "!0";
+// T3's own "tool call failed" check (exit code, failed/declined status, error output), which the timeline
+// bundle imports under a per-build name; patchText finds that name before ok-rows uses it.
+const FAILED_FN_RE = new RegExp(`toolLifecycleStatus!==\`inProgress\`&&!(${ID})\\(${ID}\\.entry\\)`, "g");
+let failedFn = null;
+const failed = (entry) => `${failedFn}(${entry})`;
+const rowsOpen = (entry) => {
+  const thoughts = !COLLAPSE.has("thinking");
+  if (COLLAPSE.has("rows")) return `${entry}.itemType===\`reasoning\``;
+  if (COLLAPSE.has("ok-rows")) return thoughts ? `${entry}.itemType===\`reasoning\`||${failed(entry)}` : failed(entry);
+  return thoughts ? "!0" : `${entry}.itemType!==\`reasoning\``;
+};
 
 // Thought styling: T3_THOUGHTS=italic,small,line|strong-line (or plain), default line,small. Always muted grey.
 const THOUGHT_OPTIONS = ["italic", "small", "line", "strong-line", "plain"];
 const THOUGHTS = new Set((process.env.T3_THOUGHTS || "line,small").split(",").map((s) => s.trim()).filter(Boolean));
 const thoughtLine = THOUGHTS.has("strong-line") ? "border-muted-foreground/40" : THOUGHTS.has("line") ? "border-border" : null;
+// Tool row styling, T3_TOOLS (comma list): small = row titles and tool-group headers smaller than replies,
+// box = expanded tool details in a bordered box, short = command titles without a leading "cd <dir> &&".
+const TOOL_OPTIONS = ["small", "box", "short"];
+const TOOLS = new Set((process.env.T3_TOOLS ?? "").split(",").map((s) => s.trim()).filter(Boolean));
 
 // Each patch must match exactly `count` times, otherwise nothing is written. `skip` patches are left out.
 const PATCHES = [
@@ -148,6 +162,40 @@ const PATCHES = [
     count: 1,
   },
   {
+    name: "tool/command row titles are smaller than replies (T3_TOOLS small)",
+    skip: !TOOLS.has("small"),
+    re: /className:`flex min-w-0 w-full items-baseline gap-1\.5 text-sm leading-relaxed`/g,
+    to: (m) => m.replace("text-sm", "text-xs"),
+    count: 1,
+  },
+  {
+    name: "tool-group headers are smaller than replies (T3_TOOLS small)",
+    skip: !TOOLS.has("small"),
+    re: /className:`relative min-h-6 w-fit max-w-full min-w-0 overflow-hidden rounded-md text-sm leading-relaxed`/g,
+    to: (m) => m.replace("text-sm", "text-xs"),
+    count: 1,
+  },
+  {
+    name: "expanded tool details (command, arguments, output) sit in a bordered box (T3_TOOLS box)",
+    skip: !TOOLS.has("box"),
+    re: new RegExp(`(=${ID}\\(\`space-y-1\\.5)(\`,${ID}\\))`, "g"),
+    to: (_, head, tail) => `${head} rounded-md border p-2${tail}`,
+    count: 1,
+  },
+  {
+    name: "command titles drop a leading 'cd <dir> &&' (T3_TOOLS short)",
+    skip: !TOOLS.has("short"),
+    re: new RegExp(`(if\\((${ID})\\.command\\?\\.trim\\(\\)\\)return ${ID}\\(\\2\\.command\\))`, "g"),
+    to: (_, head) => `${head}.replace(/^cd \\S+ && /,\`\`)`,
+    count: 1,
+  },
+  {
+    name: "approval prompt shows the whole command instead of scrolling it past 10rem (frees space too)",
+    re: /block max-h-40 min-w-0 overflow-auto whitespace-pre-wrap font-mono text-xs leading-5 text-foreground select-text! wrap-anywhere \[scrollbar-width:thin\] /g,
+    to: () => "block min-w-0 whitespace-pre-wrap font-mono text-xs leading-5 text-foreground select-text! wrap-anywhere ",
+    count: 1,
+  },
+  {
     name: "tool-call group grows with its content instead of scrolling past min(18rem, 50dvh)",
     re: new RegExp(`(let ${ID}=)\`calc\\(min\\(18rem, 50dvh\\) \\+ \\$\\{${ID}\\}px\\)\``, "g"),
     to: (_, head) => `${head}\`none\``,
@@ -172,6 +220,11 @@ const log = (msg) => console.log(`${new Date().toISOString()} ${msg}`);
 const unknownCollapse = [...COLLAPSE].filter((c) => !COLLAPSE_OPTIONS.includes(c));
 if (unknownCollapse.length) {
   log(`ERROR: T3_COLLAPSE has unknown ${unknownCollapse.join(", ")}; use ${COLLAPSE_OPTIONS.join(", ")}.`);
+  process.exit(1);
+}
+const unknownTools = [...TOOLS].filter((c) => !TOOL_OPTIONS.includes(c));
+if (unknownTools.length) {
+  log(`ERROR: T3_TOOLS has unknown ${unknownTools.join(", ")}; use ${TOOL_OPTIONS.join(", ")}.`);
   process.exit(1);
 }
 const unknownThoughts = [...THOUGHTS].filter((c) => !THOUGHT_OPTIONS.includes(c));
@@ -273,6 +326,16 @@ function readArchive(file) {
 
 function patchText(text) {
   let out = text;
+  if (COLLAPSE.has("ok-rows") && !COLLAPSE.has("rows")) {
+    const found = [...text.matchAll(FAILED_FN_RE)];
+    if (found.length !== 1) {
+      throw new Error(
+        `T3 changed and this copy doesn't handle it. Update: git -C "${HERE}" pull, then run apply again ` +
+          `(no fix yet? see AGENTS.md section 6). T3's failed-tool check (for ok-rows) matched ${found.length}x, expected 1x.`,
+      );
+    }
+    failedFn = found[0][1];
+  }
   for (const p of PATCHES.filter((p) => !p.skip)) {
     if (typeof p.to !== "function") throw new Error(`Patch "${p.name}" has no replacement function.`);
     const hits = out.match(p.re)?.length ?? 0;
@@ -444,7 +507,7 @@ function installAgent() {
   <key>Label</key><string>${LABEL}</string>
   <key>ProgramArguments</key>
   <array><string>${xml(process.execPath)}</string><string>${xml(script)}</string><string>apply</string><string>--quiet</string></array>
-  <key>EnvironmentVariables</key><dict><key>T3_APP</key><string>${xml(ASAR)}</string>${COLLAPSE.size ? `<key>T3_COLLAPSE</key><string>${[...COLLAPSE].join(",")}</string>` : ""}${process.env.T3_THOUGHTS ? `<key>T3_THOUGHTS</key><string>${[...THOUGHTS].join(",")}</string>` : ""}</dict>
+  <key>EnvironmentVariables</key><dict><key>T3_APP</key><string>${xml(ASAR)}</string>${COLLAPSE.size ? `<key>T3_COLLAPSE</key><string>${[...COLLAPSE].join(",")}</string>` : ""}${process.env.T3_THOUGHTS ? `<key>T3_THOUGHTS</key><string>${[...THOUGHTS].join(",")}</string>` : ""}${TOOLS.size ? `<key>T3_TOOLS</key><string>${[...TOOLS].join(",")}</string>` : ""}</dict>
   <key>WatchPaths</key><array><string>${xml(ASAR)}</string></array>
   <key>RunAtLoad</key><true/>
   <key>StartInterval</key><integer>1800</integer>

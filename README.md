@@ -22,6 +22,9 @@ What it changes:
   icon grey (like the brain icon) so the white shimmer band stands out
 - the thinking panel's 384px max-height cap and its own scroll container are removed (no inner scrollbar)
 - the tool-call group is no longer capped at min(18rem, 50dvh); it grows with its content instead of scrolling
+- an approval prompt shows the whole command it asks about instead of scrolling it after 10 lines
+- optional tool-row styling with `T3_TOOLS` (see below): smaller titles, a box around expanded details,
+  and command titles without a leading `cd <dir> &&`
 
 Upstream discussion: https://github.com/pingdotgg/t3code/discussions/12149
 
@@ -63,7 +66,8 @@ node t3-timeline-tweaks.mjs uninstall-agent  # macOS
 
 Each "start expanded" default above can be switched off with `T3_COLLAPSE`, a comma-separated list
 of `turns` (finished turns), `groups`, `thinking`, `rows` (command/tool rows) and `subagents`. Those keep
-T3's collapsed default:
+T3's collapsed default. `ok-rows` is `rows` except that failed commands and tools still start open (T3's
+own "tool call failed" check: exit code, failed or declined status, error output):
 
 ```sh
 T3_COLLAPSE=rows,subagents node t3-timeline-tweaks.mjs restore
@@ -91,6 +95,19 @@ muted grey; the list adds the rest:
 
 The default is `line,small`. For the older italic look without a line: `T3_THOUGHTS=italic,small`, used with
 `restore`, `apply` and `install-agent` like `T3_COLLAPSE` above.
+
+Tool rows are styled with `T3_TOOLS`, also a comma-separated list; when it is unset they look as in T3:
+
+| Option | Effect |
+|---|---|
+| `small` | command/tool row titles and tool-group headers smaller than replies |
+| `box` | expanded tool details (command, arguments, output) in a bordered box |
+| `short` | command titles without a leading `cd <dir> &&` |
+
+For example `T3_COLLAPSE=ok-rows T3_TOOLS=small,box,short` keeps successful commands folded, opens failed
+ones, and keeps tool rows visually quieter than the agent's replies. The patched bundle has to stay the
+same size as the original, so a few option combinations leave little room; if a T3 update makes one too
+large, `apply` reports `grew by N bytes` and writes nothing.
 
 Restart T3 Code after apply/restore. On macOS, after a T3 update the agent re-patches within seconds
 (or 30 min at worst). If T3 relaunched less than 2 minutes earlier (the usual case right after an
