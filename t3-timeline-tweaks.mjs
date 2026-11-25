@@ -43,7 +43,7 @@ const THOUGHT_OPTIONS = ["italic", "small", "line", "strong-line", "plain"];
 const THOUGHTS = new Set((process.env.T3_THOUGHTS || "line,small").split(",").map((s) => s.trim()).filter(Boolean));
 const thoughtLine = THOUGHTS.has("strong-line") ? "border-muted-foreground/40" : THOUGHTS.has("line") ? "border-border" : null;
 // Tool row styling, T3_TOOLS (comma list): small = row titles and tool-group headers smaller than replies,
-// box = expanded tool details in a bordered box, short = command titles without a leading "cd <dir> &&"
+// box = expanded tool details in a bordered box, short = command titles without a leading "cd <dir> &&" (or ;)
 // and file titles with the home directory shown as ~.
 const TOOL_OPTIONS = ["small", "box", "short"];
 // In the patched code: turns "/Users/<name>" or "/home/<name>" at the start of a path into "~".
@@ -186,10 +186,10 @@ const PATCHES = [
     count: 1,
   },
   {
-    name: "command titles drop a leading 'cd <dir> &&' (T3_TOOLS short)",
+    name: "command titles drop a leading 'cd <dir> &&' or 'cd <dir>;', quoted dirs too (T3_TOOLS short)",
     skip: !TOOLS.has("short"),
     re: new RegExp(`(if\\((${ID})\\.command\\?\\.trim\\(\\)\\)return ${ID}\\(\\2\\.command\\))`, "g"),
-    to: (_, head) => `${head}.replace(/^cd \\S+ && /,\`\`)`,
+    to: (_, head) => `${head}.replace(/^cd ("[^"]*"|'[^']*'|\\S+?) ?(&&|;) /,\`\`)`,
     count: 1,
   },
   {

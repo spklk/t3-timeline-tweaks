@@ -102,7 +102,7 @@ Tool rows are styled with `T3_TOOLS`, also a comma-separated list; when it is un
 |---|---|
 | `small` | command/tool row titles and tool-group headers smaller than replies |
 | `box` | expanded tool details (command, arguments, output) in a bordered box |
-| `short` | command titles without a leading `cd <dir> &&`; file titles show `/Users/<name>` or `/home/<name>` as `~` |
+| `short` | command titles without a leading `cd <dir> &&` or `cd <dir>;` (quoted directories too); file titles show `/Users/<name>` or `/home/<name>` as `~` |
 
 For example `T3_COLLAPSE=ok-rows T3_TOOLS=small,box,short` keeps successful commands folded, opens failed
 ones, and keeps tool rows visually quieter than the agent's replies. The patched bundle has to stay the
