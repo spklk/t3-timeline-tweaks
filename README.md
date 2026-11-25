@@ -24,7 +24,7 @@ What it changes:
 - the tool-call group is no longer capped at min(18rem, 50dvh); it grows with its content instead of scrolling
 - an approval prompt shows the whole command it asks about instead of scrolling it after 10 lines
 - optional tool-row styling with `T3_TOOLS` (see below): smaller titles, a box around expanded details,
-  and command titles without a leading `cd <dir> &&`
+  and shorter titles (no leading `cd <dir> &&`, home directory as `~`)
 
 Upstream discussion: https://github.com/pingdotgg/t3code/discussions/12149
 
@@ -102,7 +102,7 @@ Tool rows are styled with `T3_TOOLS`, also a comma-separated list; when it is un
 |---|---|
 | `small` | command/tool row titles and tool-group headers smaller than replies |
 | `box` | expanded tool details (command, arguments, output) in a bordered box |
-| `short` | command titles without a leading `cd <dir> &&` |
+| `short` | command titles without a leading `cd <dir> &&`; file titles show `/Users/<name>` or `/home/<name>` as `~` |
 
 For example `T3_COLLAPSE=ok-rows T3_TOOLS=small,box,short` keeps successful commands folded, opens failed
 ones, and keeps tool rows visually quieter than the agent's replies. The patched bundle has to stay the

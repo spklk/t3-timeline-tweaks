@@ -43,8 +43,11 @@ const THOUGHT_OPTIONS = ["italic", "small", "line", "strong-line", "plain"];
 const THOUGHTS = new Set((process.env.T3_THOUGHTS || "line,small").split(",").map((s) => s.trim()).filter(Boolean));
 const thoughtLine = THOUGHTS.has("strong-line") ? "border-muted-foreground/40" : THOUGHTS.has("line") ? "border-border" : null;
 // Tool row styling, T3_TOOLS (comma list): small = row titles and tool-group headers smaller than replies,
-// box = expanded tool details in a bordered box, short = command titles without a leading "cd <dir> &&".
+// box = expanded tool details in a bordered box, short = command titles without a leading "cd <dir> &&"
+// and file titles with the home directory shown as ~.
 const TOOL_OPTIONS = ["small", "box", "short"];
+// In the patched code: turns "/Users/<name>" or "/home/<name>" at the start of a path into "~".
+const TILDE = String.raw`.replace(/^\/(Users|home)\/[^/]+/,"~")`;
 const TOOLS = new Set((process.env.T3_TOOLS ?? "").split(",").map((s) => s.trim()).filter(Boolean));
 
 // Each patch must match exactly `count` times, otherwise nothing is written. `skip` patches are left out.
@@ -190,9 +193,23 @@ const PATCHES = [
     count: 1,
   },
   {
-    name: "approval prompt shows the whole command instead of scrolling it past 10rem (frees space too)",
-    re: /block max-h-40 min-w-0 overflow-auto whitespace-pre-wrap font-mono text-xs leading-5 text-foreground select-text! wrap-anywhere \[scrollbar-width:thin\] /g,
-    to: () => "block min-w-0 whitespace-pre-wrap font-mono text-xs leading-5 text-foreground select-text! wrap-anywhere ",
+    name: "changed-file titles show the home directory as ~ (T3_TOOLS short)",
+    skip: !TOOLS.has("short"),
+    re: new RegExp(`(let (${ID})=${ID}\\(${ID},${ID}\\))(;return ${ID}\\.changedFiles\\.length===1\\?\\2:)`, "g"),
+    to: (_, head, _r, tail) => `${head}${TILDE}${tail}`,
+    count: 1,
+  },
+  {
+    name: "'Read file' titles show the home directory as ~ (T3_TOOLS short)",
+    skip: !TOOLS.has("short"),
+    re: new RegExp(`(===\`read\`&&(${ID})\\[0\\]\\)return ${ID}\\(\\2\\[0\\])`, "g"),
+    to: (_, head) => `${head}${TILDE}`,
+    count: 1,
+  },
+  {
+    name: "approval prompt shows the whole command instead of scrolling it past 10rem; no longer a scroll tab stop (frees space too)",
+    re: /block max-h-40 min-w-0 overflow-auto (whitespace-pre-wrap font-mono text-xs leading-5 text-foreground select-text! wrap-anywhere) \[scrollbar-width:thin\] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring\/70`(,"data-approval-detail":`complete`),tabIndex:0/g,
+    to: (_, classes, data) => `block min-w-0 ${classes}\`${data}`,
     count: 1,
   },
   {
