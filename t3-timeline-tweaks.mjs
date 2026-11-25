@@ -113,7 +113,10 @@ const PATCHES = [
   },
   {
     name: "'Working for …' row: top divider (it sits at the bottom) and small italic thinking-colored status text",
-    re: /className:`border-b border-border\/60 pb-2 pt-1`(,children:\(0,\$\.jsxs\)\(`div`,\{className:`flex h-6 min-w-0 items-baseline gap-2 px-1 )text-sm leading-relaxed text-muted-foreground( tabular-nums`)/g,
+    re: new RegExp(
+      `className:\`border-b border-border\\/60 pb-2 pt-1\`(,children:\\(0,${ID}\\.jsxs\\)\\(\`div\`,\\{className:\`flex h-6 min-w-0 items-baseline gap-2 px-1 )text-sm leading-relaxed text-muted-foreground( tabular-nums\`)`,
+      "g",
+    ),
     to: (_, mid, tail) =>
       `className:\`border-t border-border/60 pb-1 pt-2\`${mid}text-xs italic leading-relaxed text-secondary-label${tail}`,
     count: 1,
