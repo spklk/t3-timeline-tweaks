@@ -7,13 +7,15 @@ still working.
 What it changes:
 
 - work groups (tool/thinking runs) start expanded
-- finished turns are no longer folded into "Worked for Xs"
+- finished turns stay expanded under a clickable "Worked for Xs" header; one click folds the turn away,
+  and reopening it brings back the rows you had open
 - "Thought" rows start expanded
 - command and tool rows start expanded, so their output shows without a click; long output still
   scrolls inside T3's own height cap
 - subagent groups start expanded
 - clicking still collapses (or opens) any of these, and that choice sticks when the row scrolls away
-- thinking text is muted (`text-secondary-label`), italic and smaller than replies (`text-xs`, 12px vs 14px)
+- thinking text is muted (`text-secondary-label`) and smaller than replies (`text-xs`, 12px vs 14px), with a
+  thin line down its left edge; `T3_THOUGHTS` changes this (see below)
 - the "Working for Xs" timer sits at the bottom of the timeline while the agent works, instead of
   under your message where expanded output scrolls it out of view; it shimmers like "Thinking" and
   uses small italic text in the thinking color so it reads as a status line; its text is the muted
@@ -60,7 +62,8 @@ node t3-timeline-tweaks.mjs uninstall-agent  # macOS
 ```
 
 Each "start expanded" default above can be switched off with `T3_COLLAPSE`, a comma-separated list
-of `groups`, `thinking`, `rows` (command/tool rows) and `subagents`. Those keep T3's collapsed default:
+of `turns` (finished turns), `groups`, `thinking`, `rows` (command/tool rows) and `subagents`. Those keep
+T3's collapsed default:
 
 ```sh
 T3_COLLAPSE=rows,subagents node t3-timeline-tweaks.mjs restore
@@ -71,20 +74,35 @@ T3_COLLAPSE=rows,subagents node t3-timeline-tweaks.mjs install-agent   # macOS: 
 To change it later, run those three again with the new list (`restore` first, since `apply` skips an
 already patched app).
 
-To keep tool activity closed but still read everything the agent wrote, collapse all four:
-`T3_COLLAPSE=groups,thinking,rows,subagents`. Finished turns still never fold into "Worked for" (that
-part has no opt-out), so every text part of a turn stays visible.
+To keep tool activity closed but still read everything the agent wrote, collapse all but `turns`:
+`T3_COLLAPSE=groups,thinking,rows,subagents`. Finished turns then stay open, so every text part of a
+turn stays visible.
+
+Thought styling is set the same way with `T3_THOUGHTS`, a comma-separated list. Thoughts are always
+muted grey; the list adds the rest:
+
+| Option | Effect |
+|---|---|
+| `small` | smaller than replies (otherwise reply-sized) |
+| `italic` | italic text |
+| `line` | faint line down the left edge |
+| `strong-line` | darker line instead |
+| `plain` | none of these |
+
+The default is `line,small`. For the older italic look without a line: `T3_THOUGHTS=italic,small`, used with
+`restore`, `apply` and `install-agent` like `T3_COLLAPSE` above.
 
 Restart T3 Code after apply/restore. On macOS, after a T3 update the agent re-patches within seconds
 (or 30 min at worst). If T3 relaunched less than 2 minutes earlier (the usual case right after an
 update) the agent restarts it once more by itself. Otherwise T3 may be running sessions, so it asks first with
-a "Restart now" / "Later" dialog (it closes itself as "Later" after 10 minutes). It restarts T3 at most
-once a minute; within that minute it falls back to a notification, so a restart loop cannot happen. Log: `~/Library/Logs/t3-timeline-tweaks.log`.
+a "Restart now" / "Later" dialog (it closes itself as "Later" after 10 minutes). A second restart within a
+minute (an update relaunching T3 right after the agent's restart) also asks first, so a restart loop
+cannot happen and an unpatched T3 never keeps running unnoticed. Log: `~/Library/Logs/t3-timeline-tweaks.log`.
 Keep the clone where it is: the agent and the backup live in it.
 
 ## How it works and caveats
 
-It edits the minified timeline bundle (currently `useTimelineFollow-*.js`, earlier `_chat-*.js`) inside T3's `app.asar` in place
+It edits the minified timeline bundle (currently `ReadOnlyThreadTimeline-*.js`, earlier `useTimelineFollow-*.js` and `_chat-*.js`) inside T3's `app.asar` in place
 with a list of regex patches (`PATCHES` in the script). The bundle keeps the same byte size, and the
 asar integrity hashes are updated.
 
@@ -93,7 +111,7 @@ asar integrity hashes are updated.
   stays untouched. The regexes then need updating; AGENTS.md section 6 explains how.
 - This modifies a signed app. It is not supported by T3; use it at your own risk.
   `restore` (or reinstalling T3 Code) undoes it.
-- Last verified against `0.1.12-nightly.20261125.5230`. Only nightly builds have been checked.
+- Last verified against `0.1.13-nightly.20261125.5245`. Only nightly builds have been checked.
 
 ## Getting fixes
 

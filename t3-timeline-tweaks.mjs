@@ -21,12 +21,17 @@ const LAST_RESTART = path.join(os.homedir(), "Library/Logs/t3-timeline-tweaks.la
 const MARKER = "/*t3xt*/";
 const ID = "[\\w$]+";
 
-// Opt-outs: T3_COLLAPSE=groups,thinking,rows,subagents keeps those starting collapsed (upstream behaviour).
-const COLLAPSE_OPTIONS = ["groups", "thinking", "rows", "subagents"];
+// Opt-outs: T3_COLLAPSE=turns,groups,thinking,rows,subagents keeps those starting collapsed (upstream behaviour).
+const COLLAPSE_OPTIONS = ["turns", "groups", "thinking", "rows", "subagents"];
 const COLLAPSE = new Set((process.env.T3_COLLAPSE ?? "").split(",").map((s) => s.trim()).filter(Boolean));
 // Which work rows start open. The expandedEntries Set then holds the rows flipped from that default.
 const rowsOpen = (entry) =>
   COLLAPSE.has("rows") ? `${entry}.itemType===\`reasoning\`` : COLLAPSE.has("thinking") ? `${entry}.itemType!==\`reasoning\`` : "!0";
+
+// Thought styling: T3_THOUGHTS=italic,small,line|strong-line (or plain), default line,small. Always muted grey.
+const THOUGHT_OPTIONS = ["italic", "small", "line", "strong-line", "plain"];
+const THOUGHTS = new Set((process.env.T3_THOUGHTS || "line,small").split(",").map((s) => s.trim()).filter(Boolean));
+const thoughtLine = THOUGHTS.has("strong-line") ? "border-muted-foreground/40" : THOUGHTS.has("line") ? "border-border" : null;
 
 // Each patch must match exactly `count` times, otherwise nothing is written. `skip` patches are left out.
 const PATCHES = [
@@ -38,15 +43,17 @@ const PATCHES = [
     count: 4,
   },
   {
-    name: "finished turns do not hide their work",
-    re: new RegExp(`if\\(!${ID}\\.expandedRunIds\\?\\.has\\(${ID}\\.runId\\)\\)\\{`, "g"),
-    to: () => "if(!1){",
+    name: "finished turns start expanded (Set now tracks collapsed turns)",
+    skip: COLLAPSE.has("turns"),
+    re: new RegExp(`if\\(!(${ID}\\.expandedRunIds\\?\\.has\\(${ID}\\.runId\\)\\)\\{)`, "g"),
+    to: (_, rest) => `if(${rest}`,
     count: 1,
   },
   {
-    name: "no 'Worked for …' turn-fold row",
-    re: new RegExp(`if\\((${ID})\\)\\{(let ${ID}=[^;]{0,40}?\\1\\.entryIds\\b)`, "g"),
-    to: (_, _fold, rest) => `if(!1){${rest}`,
+    name: "'Worked for …' header shows expanded turns as open, so one click collapses them",
+    skip: COLLAPSE.has("turns"),
+    re: new RegExp(`expanded:(${ID})\\.expandedRunIds\\?\\.has\\((${ID})\\.runId\\)\\?\\?!1`, "g"),
+    to: (_, state, fold) => `expanded:!${state}.expandedRunIds?.has(${fold}.runId)`,
     count: 1,
   },
   {
@@ -85,9 +92,10 @@ const PATCHES = [
     count: 1,
   },
   {
-    name: "reasoning text is muted, italic, and smaller than replies (text-xs vs text-sm)",
+    name: "reasoning text is muted, reply-sized unless T3_THOUGHTS has small, italic if it has italic",
     re: new RegExp(`className:\`text-foreground\`,text:(${ID})\\.detail\\?\\?\``, "g"),
-    to: (_, entry) => `className:\`text-secondary-label italic text-xs\`,text:${entry}.detail??\``,
+    to: (_, entry) =>
+      `className:\`text-secondary-label${THOUGHTS.has("italic") ? " italic" : ""} ${THOUGHTS.has("small") ? "text-xs" : "text-sm"}\`,text:${entry}.detail??\``,
     count: 1,
   },
   {
@@ -146,9 +154,9 @@ const PATCHES = [
     count: 1,
   },
   {
-    name: "reasoning panel has no max-height cap and never scrolls itself",
-    re: /ms-7 flex max-h-96 flex-col gap-3 overflow-auto/g,
-    to: () => "ms-7 flex flex-col gap-3 overflow-visible",
+    name: "reasoning panel has no max-height cap, never scrolls itself, and has a rule down its left edge (T3_THOUGHTS line)",
+    re: /ms-7 flex max-h-96 flex-col gap-3 overflow-auto px-0\.5 /g,
+    to: () => (thoughtLine ? `ms-3 flex flex-col gap-3 border-s-2 ${thoughtLine} ps-3 ` : "ms-7 flex flex-col gap-3 px-0.5 "),
     count: 1,
   },
   {
@@ -164,6 +172,11 @@ const log = (msg) => console.log(`${new Date().toISOString()} ${msg}`);
 const unknownCollapse = [...COLLAPSE].filter((c) => !COLLAPSE_OPTIONS.includes(c));
 if (unknownCollapse.length) {
   log(`ERROR: T3_COLLAPSE has unknown ${unknownCollapse.join(", ")}; use ${COLLAPSE_OPTIONS.join(", ")}.`);
+  process.exit(1);
+}
+const unknownThoughts = [...THOUGHTS].filter((c) => !THOUGHT_OPTIONS.includes(c));
+if (unknownThoughts.length) {
+  log(`ERROR: T3_THOUGHTS has unknown ${unknownThoughts.join(", ")}; use ${THOUGHT_OPTIONS.join(", ")}.`);
   process.exit(1);
 }
 
@@ -345,15 +358,14 @@ function restartAfterPatch(version) {
   const bundle = ASAR.slice(0, ASAR.indexOf(".app/") + 4);
   const uptime = IS_MAC ? t3Uptime(bundle) : null;
   if (uptime === null) return later();
-  // At most one restart a minute, so if something keeps unpatching T3 there is time to step in.
-  const lastRestart = fs.existsSync(LAST_RESTART) ? fs.statSync(LAST_RESTART).mtimeMs : 0;
-  if (Date.now() - lastRestart < 60_000) {
-    log("Not restarting: T3 Code was restarted less than a minute ago.");
-    return later();
-  }
   // After an update T3 relaunches before the patch lands, so a T3 that fresh is restarted silently.
   // An older one may be running agent sessions (a fix landing hours later), so ask first.
-  if (uptime > 120 && !askRestart(version)) return;
+  // A second restart within a minute (an update relaunched T3 right after ours) also asks, so a
+  // T3 that keeps unpatching itself cannot loop, yet a running unpatched T3 is never left unnoticed.
+  const lastRestart = fs.existsSync(LAST_RESTART) ? fs.statSync(LAST_RESTART).mtimeMs : 0;
+  const restartedRecently = Date.now() - lastRestart < 60_000;
+  if (restartedRecently) log("T3 Code was restarted less than a minute ago; asking before restarting again.");
+  if ((restartedRecently || uptime > 120) && !askRestart(version)) return;
   fs.writeFileSync(LAST_RESTART, "");
   if (restartT3(bundle)) return log("Restarted T3 Code to load the patch.");
   later();
@@ -432,7 +444,7 @@ function installAgent() {
   <key>Label</key><string>${LABEL}</string>
   <key>ProgramArguments</key>
   <array><string>${xml(process.execPath)}</string><string>${xml(script)}</string><string>apply</string><string>--quiet</string></array>
-  <key>EnvironmentVariables</key><dict><key>T3_APP</key><string>${xml(ASAR)}</string>${COLLAPSE.size ? `<key>T3_COLLAPSE</key><string>${[...COLLAPSE].join(",")}</string>` : ""}</dict>
+  <key>EnvironmentVariables</key><dict><key>T3_APP</key><string>${xml(ASAR)}</string>${COLLAPSE.size ? `<key>T3_COLLAPSE</key><string>${[...COLLAPSE].join(",")}</string>` : ""}${process.env.T3_THOUGHTS ? `<key>T3_THOUGHTS</key><string>${[...THOUGHTS].join(",")}</string>` : ""}</dict>
   <key>WatchPaths</key><array><string>${xml(ASAR)}</string></array>
   <key>RunAtLoad</key><true/>
   <key>StartInterval</key><integer>1800</integer>

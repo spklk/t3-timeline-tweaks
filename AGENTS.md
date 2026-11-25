@@ -58,10 +58,12 @@ Permission errors on `apply`:
 
 Then ask the user to restart T3 Code.
 
-Opt-outs: `T3_COLLAPSE` (comma list of `groups`, `thinking`, `rows`, `subagents`) keeps those starting
-collapsed; see README.md. If the user sets it, it must also reach every re-apply job below: on macOS
-run `install-agent` with it set; on Windows set it as a user environment variable like `T3_APP`; in the
-Linux apt hook put `T3_COLLAPSE=... ` in front of the node command.
+Options (see README.md): `T3_COLLAPSE` (comma list of `turns`, `groups`, `thinking`, `rows`, `subagents`)
+keeps those starting collapsed; `T3_THOUGHTS` (comma list of `small`, `italic`, `line`, `strong-line`, or
+`plain`; default `line,small`) sets how thinking text looks. If the user sets either, it must also reach
+every re-apply job below: on macOS run `install-agent` with it set; on Windows set it as a user
+environment variable like `T3_APP`; in the Linux apt hook put `T3_COLLAPSE=... T3_THOUGHTS=... ` in front
+of the node command.
 
 ## 3. Keep it applied after T3 updates
 
@@ -78,9 +80,9 @@ This installs a LaunchAgent that runs `apply --quiet` whenever `app.asar` change
 30 minutes. Failures show a macOS notification. Log: `~/Library/Logs/t3-timeline-tweaks.log`.
 When it patches a T3 that started less than 2 minutes ago (just relaunched by its updater), it quits
 and reopens T3 itself; macOS may ask once to allow `node` to control T3 Code. An older T3 may be running
-sessions, so it shows a "Restart now" / "Later" dialog instead. A manual `apply` never restarts T3, and
-the agent restarts it at most once a minute (falling back to a notification; the time is kept in
-`~/Library/Logs/t3-timeline-tweaks.last-restart`).
+sessions, so it shows a "Restart now" / "Later" dialog instead. A manual `apply` never restarts T3. A
+second restart within a minute (the time is kept in `~/Library/Logs/t3-timeline-tweaks.last-restart`)
+also shows the dialog, so it cannot loop.
 
 The agent runs the `node` binary that ran `install-agent`, and that binary needs the App Management permission
 from section 2. With Homebrew the path is version-specific: after `brew upgrade node`, grant the new
@@ -141,8 +143,9 @@ re-extracted manually.
 
 After a restart of T3 Code, in a thread where the agent thinks and runs tools:
 
-- "Thought" rows, tool groups, command/tool rows and subagent groups are expanded (unless opted out
-  with `T3_COLLAPSE`); thinking text is small, italic and muted
+- finished turns, "Thought" rows, tool groups, command/tool rows and subagent groups are expanded (unless
+  opted out with `T3_COLLAPSE`); a finished turn has a "Worked for Xs" header that folds it on click
+- thinking text is small and muted with a thin line down its left edge (or as set with `T3_THOUGHTS`)
 - tool groups and thinking have no inner scrollbars
 - while the agent works, a small italic shimmering "Working for Xs" line sits at the bottom
 
@@ -161,7 +164,7 @@ Linux: `sudo rm /etc/apt/apt.conf.d/99-t3-timeline-tweaks`.
 First run `git pull` in this clone and `dry-run` again: a fix may already be published. Only if it still
 fails, update the patches yourself as below.
 
-The patches are regexes over T3's minified timeline bundle (`apps/server/dist/client/assets/useTimelineFollow-*.js`, earlier `_chat-*.js`)
+The patches are regexes over T3's minified timeline bundle (`apps/server/dist/client/assets/ReadOnlyThreadTimeline-*.js`, earlier `useTimelineFollow-*.js` and `_chat-*.js`)
 inside `app.asar`. Minified identifiers change between builds, so the regexes use the `ID` wildcard
 and anchor on stable strings: class names, `"Working for "`, `expandedWorkGroupIds`,
 `calc(min(18rem, 50dvh)`, and so on. Each entry in `PATCHES` has a `name` that says what it does.
@@ -178,7 +181,7 @@ To update them:
    cp "<app.asar>" /tmp/t3x/app.asar
    T3_APP=/tmp/t3x/app.asar T3_BACKUP_DIR=/tmp/t3x/backup node t3-timeline-tweaks.mjs apply
    npx -y @electron/asar extract /tmp/t3x/app.asar /tmp/t3x/patched
-   cp /tmp/t3x/patched/apps/server/dist/client/assets/useTimelineFollow-*.js /tmp/t3x/check.mjs
+   cp /tmp/t3x/patched/apps/server/dist/client/assets/ReadOnlyThreadTimeline-*.js /tmp/t3x/check.mjs
    node --check /tmp/t3x/check.mjs
    ```
 
