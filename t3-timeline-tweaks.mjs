@@ -208,8 +208,14 @@ const PATCHES = [
   },
   {
     name: "approval prompt shows the whole command instead of scrolling it past 10rem; no longer a scroll tab stop (frees space too)",
-    re: /block max-h-40 min-w-0 overflow-auto (whitespace-pre-wrap font-mono text-xs leading-5 text-foreground select-text! wrap-anywhere) \[scrollbar-width:thin\] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring\/70`(,"data-approval-detail":`complete`),tabIndex:0/g,
-    to: (_, classes, data) => `block min-w-0 ${classes}\`${data}`,
+    // The cap and tab stop sit on the shared <code> of every detail part; without the cap the
+    // "Scroll to read all of it" hints stay hidden, since they test scrollHeight > clientHeight.
+    re: new RegExp(
+      "block max-h-40 min-w-0 overflow-auto (whitespace-pre-wrap font-mono text-xs leading-5 text-foreground select-text! wrap-anywhere) \\[scrollbar-width:thin\\] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring\\/70`" +
+        `([\\s\\S]{0,400}?"data-approval-detail":${ID}),tabIndex:0`,
+      "g",
+    ),
+    to: (_, classes, between) => `block min-w-0 ${classes}\`${between}`,
     count: 1,
   },
   {
