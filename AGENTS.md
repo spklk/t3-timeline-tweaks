@@ -188,5 +188,7 @@ To update them:
 
 4. The patched bundle must not be larger than the original (the script reports `grew by N bytes`). Keep
    replacements no longer than what they replace.
-5. Apply for real, have the user restart T3 Code and check section 4. Update "Last verified against" in
+5. Apply for real, have the user restart T3 Code and check section 4. A manual `apply` must carry the
+   same `T3_*` options as the re-apply job (macOS: `EnvironmentVariables` in
+   `~/Library/LaunchAgents/local.t3-timeline-tweaks.plist`), or the user gets the defaults. Update "Last verified against" in
    `README.md`.
